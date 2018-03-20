@@ -1,0 +1,300 @@
+---
+title: "{Raquel Buezo Tordesillas} {A20410771}, {Pablo Medrano}
+  {A20410758}"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r}
+library(ISLR)
+
+Auto = na.omit(Auto)
+dim(Auto)
+
+Auto$origin = as.factor(Auto$origin)
+myData = subset(Auto,select = -name)
+myData
+```
+
+```{r}
+x = model.matrix(mpg~., myData)
+View(x)
+y = myData$mpg
+library(glmnet)
+```
+
+EXERCISE 1
+
+```{r}
+
+set.seed (1)
+
+#dividing test and training sets
+
+train = sample(1:nrow(x), nrow(x)/2)
+test = (-train)
+y.test = y[test]
+
+grid = 10^seq(10, -2, length = 100)
+
+ridge.trainmod = glmnet(x[train, ], y[train], alpha = 0, lambda = grid)    #ridge model on training data
+
+# dim(coef(ridge.trainmod))
+
+#a
+cv.out = cv.glmnet(x[train,], y[train], alpha = 0, nfolds = 3)        #cross validation on training data
+plot(cv.out)                        #test MSEs from cross validation on training data
+
+#b
+bestlam=cv.out$lambda.min
+bestlam
+ridge.pred=predict(ridge.trainmod,s=bestlam,newx=x[test, ])       #test MSEs on test data
+mean((ridge.pred-y.test)^2)
+
+
+#fit full model
+full.mod=glmnet(x,y,alpha=0)
+predict(full.mod,type="coefficients",s=bestlam)
+ridge.predbest=predict(full.mod,s=bestlam,newx=x)
+mean((ridge.predbest-y.test)^2)
+
+#c
+ridge.pred0=predict(full.mod,s=0,x=x,y=y,newx=x,exact=T)
+mean((ridge.pred0-y.test)^2)
+
+#d
+ridge.pred100=predict(full.mod,s=100,newx=x)
+mean((ridge.pred100-y.test)^2)
+
+
+```
+```{r}
+#without dividing test and training set
+
+grid = 10^seq(10, -2, length = 100)
+
+ridge.mod = glmnet(x, y, alpha = 0, lambda = grid)    #ridge model 
+
+# dim(coef(ridge.trainmod))
+
+#a
+cv.out = cv.glmnet(x, y, alpha = 0, nfolds = 3)        #cross validation 
+plot(cv.out)                        #test MSEs from cross validation 
+
+#b
+bestlam=cv.out$lambda.min
+bestlam
+ridge.pred=predict(ridge.mod,s=bestlam,x)       #prediction with bestlam
+mean((ridge.pred-y)^2)                        #test MSE for bestlam
+
+
+full.mod=glmnet(x,y,alpha=0)
+ridge.predbest=predict(full.mod,s=bestlam,newx=x)
+mean((ridge.predbest-y.test)^2)
+
+#c
+ridge.pred0=predict(full.mod,s=0,x=x,y=y,newx=x,exact=T)
+mean((ridge.pred0-y.test)^2)
+
+#d
+ridge.pred100=predict(full.mod,s=100,newx=x)
+mean((ridge.pred100-y.test)^2)
+
+#e
+predict(ridge.mod,type="coefficients",s=bestlam)
+predict(ridge.mod,type="coefficients",s=0)
+predict(ridge.mod,type="coefficients",s=100)
+
+```
+a)
+```{r}
+set.seed (1)
+
+#dividing test and training sets
+
+train = sample(1:nrow(x), nrow(x)/2)
+test = (-train)
+y.test = y[test]
+
+grid = 10^seq(10, -2, length = 100)
+
+ridge.trainmod = glmnet(x[train, ], y[train], alpha = 0, lambda = grid)    #ridge model on training data
+full.mod=glmnet(x,y,alpha=0)
+# dim(coef(ridge.trainmod))
+
+#a
+cv.out = cv.glmnet(x[train,], y[train], alpha = 0, nfolds = 3)        #cross validation on training data
+plot(cv.out)                        #test MSEs from cross validation on training data
+```
+
+
+b)
+```{r}
+#b
+bestlam = cv.out$lambda.min
+bestlam
+
+b = predict(full.mod, s = bestlam, newx = x[test,])
+mean((b-y.test)^2)
+```
+
+c)
+```{r}
+#c
+
+c = predict(full.mod, s = 0, newx = x[test,], x=x,y=y,exact = T)
+mean((c-y.test)^2)
+```
+
+d)
+```{r}
+#d
+d = predict(full.mod, s = 100, newx = x[test,], nfolds = 3)
+mean((d-y.test)^2)
+```
+
+e)
+```{r}
+#e
+predict(full.mod,type="coefficients",s=bestlam)
+predict(full.mod,type="coefficients",s=0)
+predict(full.mod,type="coefficients",s=100)
+```
+
+EXERCISE 2
+
+```{r}
+#a
+lasso.mod = glmnet(x[train,], y[train], alpha = 1, lambda = grid)
+full.modlasso = glmnet(x, y, alpha = 1, lambda = grid)
+plot(lasso.mod)
+set.seed(1)
+cv.outlasso = cv.glmnet(x[train,], y[train], alpha = 1, nfolds = 3)
+plot(cv.outlasso)
+```
+
+b)
+```{r}
+#b
+bestlamlasso = cv.outlasso$lambda.min
+lasso.pred = predict(full.modlasso, s = bestlamlasso, newx = x[test,])
+mean((lasso.pred-y.test)^2)
+```
+
+c)
+```{r}
+#c
+lasso.pred = predict(full.modlasso, s = 0, x = x[train,], y = y[train], newx = x[test,], exact = T)
+mean((lasso.pred-y.test)^2)
+```
+
+d)
+```{r}
+#d
+lasso.pred = predict(full.modlasso, s = 100, newx = x[test,])
+mean((lasso.pred-y.test)^2)
+```
+
+e)
+```{r}
+#e
+predict(full.modlasso, type="coefficients", s=bestlam)
+predict(full.modlasso, type="coefficients", s=0)
+predict(full.modlasso, type="coefficients", s=100)
+```
+f)
+
+g)
+
+
+#EXERCISE 3
+a)
+```{r}
+library(pls)
+
+# set.seed(2)
+# pcr.fit = pcr(mpg~., data = myData, scale = TRUE, validation = "CV", nfolds = 3)
+# summary(pcr.fit)
+# validationplot(pcr.fit,val.type="MSEP")
+
+set.seed(1)
+pcr.fit = pcr(mpg~., data = myData, subset = train, scale = TRUE, validation = "CV", nfolds = 3)
+summary(pcr.fit)
+validationplot(pcr.fit,val.type="MSEP")
+
+pcr.pred = predict(pcr.fit, x[test,], ncomp=8)
+mean((pcr.pred-y.test)^2)
+
+
+```
+
+b)
+```{r}
+plot(cumsum(explvar(pcr.fit)), ylab = "variance explained", xlab = "number of principal components")
+```
+
+c)The number of principal components in the best model is 7
+
+d)
+```{r}
+pcr.fit=pcr(y~x,scale=TRUE,ncomp=7)
+summary(pcr.fit)
+validationplot(pcr.fit,val.type="MSEP")
+```
+We don't give MSE yet
+
+e)Yes, 4 principal components because the CV error is similar which suggest that this model with a smaller number of components might be enough.
+
+#EXERCISE 4
+a)
+```{r}
+set.seed(1)
+pls.fit = plsr(mpg~., data = myData, subset = train, scale = TRUE, validation = "CV", nfolds = 3)
+summary(pls.fit)
+validationplot(pls.fit,val.type="MSEP")
+
+pls.pred = predict(pls.fit, x[test,], ncomp=6)
+mean((pls.pred-y.test)^2)
+```
+
+b)
+```{r}
+plot(cumsum(explvar(pls.fit)), ylab = "variance explained", xlab = "number of random segments")
+```
+Why is there a value over 100%
+
+c)The number of random segments in the best model is 6
+
+d)
+```{r}
+pls.fit=plsr(y~x,scale=TRUE,ncomp=6)
+summary(pls.fit)
+validationplot(pls.fit,val.type="MSEP")
+```
+Give the one in a)
+
+d)Yes, 2 segments because it is the model with the least number of segments and a similar CV error
+
+#EXERCISE 5
+a)
+```{r}
+D<- transform(myData, origin = as.numeric(myData$origin))
+result <- prcomp(D,center = TRUE,scale. = TRUE)
+summary(result)
+
+D<- transform(myData, origin = as.numeric(myData$origin))
+dat <- data.frame(D)
+scaled.dat <- scale(dat)
+mean(scaled.dat)
+```
+
+b)
+The variance explained by the first principal component is 67.2% and the variance explained by the second principal component is 11.8%. The cumulative variance explained by the first two principal components is 78.99%.
+
+c)
+```{r}
+
+```
+

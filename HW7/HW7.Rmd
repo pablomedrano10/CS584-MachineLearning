@@ -1,0 +1,274 @@
+---
+title: "HW7"
+output: html_document
+---
+
+Libraries
+```{r}
+#rm(Auto)
+library (ISLR)
+library(tree)
+library(randomForest)
+library(MASS)
+library(e1071)
+library(gbm)
+library(caret)
+library(glmnet)
+```
+
+1.Create a new column in the dataset, high_mileage that is true if mpg > mean(mpg). Else it's false.
+```{r}
+High=ifelse (Auto$mpg <=mean(Auto$mpg),"False","True")
+Auto=data.frame(Auto,High)
+Auto$origin=as.factor(Auto$origin)
+```
+
+
+2.Set the seed to one and set up the data for 3-fold cross validation.
+```{r}
+set.seed(1)
+train=sample(1: nrow(Auto), nrow(Auto)/2)
+test=(-train)
+```
+
+3. Guess which classifier will do best
+
+
+4.Predict high mpg
+
+Accuracy function we will use later.
+```{r}
+calc_acc = function(actual, predicted) {
+  mean(actual == predicted)
+}
+```
+
+
+A) Logistic regression tuning
+
+```{r}
+x = model.matrix(High~.-name-mpg, Auto)
+x = x[, -1]
+y = Auto$High
+
+test = (-train)
+
+grid = 10^seq(10, -2, length = 100)
+
+logistic_ridge = cv.glmnet(x[train, ], y[train], alpha = 0, lambda = grid, nfolds = 3, family = "binomial")
+plot(logistic_ridge)
+bestlam=logistic_ridge$lambda.min
+logistic_ridge_pred = predict(logistic_ridge, s = bestlam, newx = x[test, ], type = "class")
+
+table(logistic_ridge_pred, High[test])
+(logistic.ridge.acc = calc_acc(predicted =logistic_ridge_pred, actual = High[test]))
+
+```
+
+
+B) Decision trees with tuning
+
+```{r}
+Auto.test=Auto[-train,]
+High.test=High[-train]
+
+tree.auto=tree(High~.-name-mpg,Auto,subset=train)
+
+plot(tree.auto)
+text(tree.auto,pretty =0)
+
+tree.pred=predict(tree.auto,Auto.test,type ="class")
+table(tree.pred,High.test)
+(tree.acc = calc_acc(predicted =tree.pred, actual = High.test))
+```
+
+Now we consider cost complexity pruning the tree to improve results.
+```{r}
+# set.seed(2)                                           I am going to leave commented what results i would get for this seed
+cv.auto=cv.tree(tree.auto,FUN=prune.misclass, K=3)
+#names(cv.auto)
+cv.auto
+```
+Despite the name, dev corresponds to our c-v error rate. Therefore we can see that the tree with 2 terminal nodes is the one that results in the lowest c-v erorr rate, with only 19 cross-validation errors.
+
+(for seed 2 -> 6 nodes, 29 cv errors)
+
+We plot the error rate as a function of size and the complexity parameter(k)
+```{r}
+par(mfrow=c(1,2))
+plot(cv.auto$size,cv.auto$dev,xlab="number of terminal nodes", ylab="cv error rate")
+plot(cv.auto$k,cv.auto$dev,xlab="complexity parameter", ylab="cv error rate")
+```
+
+Now to prune the tree to obtain the two-node tree because it is the one that gives us least CV error:
+```{r}
+prune.auto=prune.misclass(tree.auto,best=2)
+# prune.auto=prune.misclass(tree.auto,best=6)
+plot(prune.auto)
+text(prune.auto,pretty=0)
+```
+
+To see how well this pruned tree perfoms on the test data:
+```{r}
+tree.pred=predict(prune.auto,Auto.test,type="class")
+table(tree.pred,High.test)
+```
+
+```{r}
+(tree.prune.acc = calc_acc(predicted =tree.pred, actual = High.test))
+```
+Now 88.265% of the observations are corretly classified so the pruning process produced a more interpretable tree, but it has decreased the classification accuracy.
+
+
+C) Bagging with tuning
+
+```{r}
+bag.auto=randomForest(High~.-name-mpg,data=Auto,subset=train,mtry=7,importance=TRUE,ntrees=500)
+print(bag.auto)
+```
+
+How well does this bagged model perform on the test set?
+```{r}
+bag.pred=predict(bag.auto,Auto.test,type="class")     #compares with test data
+table(bag.pred,High.test)
+(bag_acc = calc_acc(predicted =bag.pred, actual = High.test))
+```
+
+
+We do cross-validation 
+
+```{r}
+# auto.bag.cv=bagging.cv(High~.-name-mpg,v=3,data=Auto[train,])
+# auto.bag.cv$confusion
+# (bag.tune.acc = calc_acc(predicted =bag.pred, actual = High.test))
+
+```
+
+
+```{r}
+# tc=tune.control(sampling="cross",cross=3)
+# bag.tune=tune(randomForest, High~.-name-mpg,Auto[train,],ranges=list(ntrees=c(1,50,100,150,300,500,800)),tunecontrol=tc)
+
+
+```
+
+
+```{r}
+
+# #rf.cv<- rf.crossValidation(bag.auto,Auto[train,],n=3,plot=TRUE)
+# library(ipred)
+
+#I got this from a text that compared RF with SVM
+# error.RF=numeric(10)
+# for (i in 1:3) error.RF[i]=errorest(High~.-mpg-name,Auto[train,],model=randomForest,estimator="cv",mtry=7)$error
+# summary(error.RF)
+
+```
+
+
+```{r}
+# ctrl=trainControl(method="cv", number=3)
+# trainModel<-train(High~.-mpg-name,data=Auto, method="treebag",trControl=ctrl)
+# trainModel
+```
+
+D) Random forest with tuning
+
+```{r}
+set.seed(1)
+rf.auto=randomForest(High~.-name-mpg,data=Auto,subset=train,mtry=3,importance=TRUE,ntrees=500)
+print(rf.auto)
+```
+
+```{r}
+rf.pred=predict(rf.auto,Auto.test,type="class")     #compares with test data
+table(rf.pred,High.test)
+(rf_acc = calc_acc(predicted =rf.pred, actual = High.test))
+```
+
+```{r}
+rf.tune=tuneRF(x[train,],y[train])
+```
+```{r}
+rf.auto.prune=randomForest(High~.-name-mpg,data=Auto,subset=train,mtry=2,importance=TRUE,ntrees=500)
+rf.pred.prune=predict(rf.auto.prune,Auto.test,type="class")     #compares with test data
+table(rf.pred.prune,High.test)
+(rf.prune.acc = calc_acc(predicted =rf.pred.prune, actual = High.test))
+```
+
+
+
+E) Boosting with tuning
+
+```{r}
+myData1 = subset(Auto,select = -name)
+myData = subset(myData1,select = -mpg)
+
+myData$High=as.numeric(myData$High)
+myData=transform(myData,High=High-1)
+train=sample(1: nrow(myData), nrow(myData)/2)
+
+auto.boost=gbm(High~.,data=myData[train,],shrinkage=0.01,cv.folds=3,distribution="bernoulli",n.trees=500,interaction.depth=4,verbose=F)
+
+best.iter=gbm.perf(auto.boost,method="cv")
+
+auto.boost.tune= train(as.factor(High)~., data=myData[train,], method="gbm",distribution="bernoulli", verbose=F, tuneGrid=data.frame(.n.trees=best.iter, .shrinkage=0.01, .interaction.depth=1, .n.minobsinnode=1))
+
+boost.pred=predict(auto.boost.tune,myData[-train,])
+table(boost.pred,High[-train])
+
+```
+
+F) SVM with linear kernel tuning
+
+```{r}
+x = model.matrix(High~.-name-mpg, Auto)
+x = x[, -1]
+y = Auto$High
+
+# train = sample(1:nrow(Auto), nrow(Auto)/2)
+# test = (-train)
+
+traindata = data.frame(x=x[train, ], y = y[train])
+
+tc = tune.control(cross = 3)
+
+tune.out = tune(svm, y~., data = traindata, , kernel = "linear", ranges = list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 100)), tunecontrol = tc) 
+
+bestmod = tune.out$best.model
+
+testdata = data.frame(x = x[test, ], y = y[test])
+
+ypred = predict(bestmod, testdata)
+table(ypred, y[test])
+```
+
+
+G) SVM with polynomial kernel and tuning
+
+```{r}
+
+tc = tune.control(cross = 3)
+tune.out = tune(svm, y~., data = traindata, , kernel = "polynomial", ranges = list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 100)), tunecontrol = tc)
+bestmod = tune.out$best.model
+xtest = x[test, ]
+testdata = data.frame(x = xtest, y = y[test])
+ypred = predict(bestmod, testdata)
+table(ypred, y[test])
+```
+
+
+
+5.
+
+
+
+6. 
+
+```{r}
+lda.fit = lda(High~.-name-mpg, Auto, subset=train)
+lda.pred = predict(lda.fit, Auto[test,])
+lda.class = lda.pred$class
+table(lda.class, Auto$High[test])
+```
+

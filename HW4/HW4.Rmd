@@ -1,0 +1,403 @@
+---
+title: Homework 4 {A20410992}, {Raquel Buezo Tordesillas} {A20410771}, {Pablo Medrano}
+  {A20410758}
+author2:
+  A20410758: null
+  Pablo Medrano Gastañaga: null
+output:
+  html_document: default
+  pdf_document: default
+author1:
+  A20410771: null
+  Raquel Buezo Tordesillas: null
+---
+#EXERCISE 1
+```{r}
+rent=c(2807, 2309, 2709, 3360, 2921)
+apt_size=c(815, 512, 702, 1012, 1261)
+plot(rent,apt_size)
+```
+We can observe from the plot that there is an outlier for the 3 Beds scenario. We would fix this problem by eliminating this outlier from our data.
+
+
+#EXERCISE 2
+```{r}
+library(ISLR)
+lm.fit = lm(sales~TV, data = Advertising)
+summary(lm.fit)
+lm.fit2 = lm(sales~TV+radio+newspaper, data = Advertising)
+summary(lm.fit2)
+RMSE = sqrt(mean((lm.fit$residuals)^2))
+RMSE
+RMSE2 = sqrt(mean((lm.fit2$residuals)^2))
+RMSE2
+```
+The adjusted R-square and the RMSE for the first model only with TV as predictor are 0.6099 and 3.242322
+The adjusted R-square for the second model with TV, radio and newpaper as predictors are 0.8956 and 1.66857.
+
+
+#EXERCISE 3
+```{r}
+library(FNN)
+train = logical(length = 200)
+train[0:160] = T
+
+train.X = as.matrix(Advertising$TV[train])
+test.X = as.matrix(Advertising$TV[!train])
+
+set.seed(1)
+knn.pred = knn.reg(train.X, test.X, Advertising$sales, k = 1, "kd_tree")
+RMSE1 = sqrt(mean((knn.pred$pred[0:39]-Advertising$sales[162:200])^2))
+RMSE1
+
+knn.pred = knn.reg(train.X, test.X, Advertising$sales, k = 10, "kd_tree")
+RMSE2 = sqrt(mean((knn.pred$pred[0:39]-Advertising$sales[162:200])^2))
+RMSE2
+
+knn.pred = knn.reg(train.X, test.X, Advertising$sales, k = 100, "kd_tree")
+RMSE3 = sqrt(mean((knn.pred$pred[0:39]-Advertising$sales[162:200])^2))
+RMSE3
+
+new_data = Advertising[,2]
+knn.pred = knn.reg(new_data, new_data, Advertising$sales, k = 1, "kd_tree")
+RMSE4 = sqrt(mean((knn.pred$pred[0:200]-Advertising$sales[0:200])^2))
+RMSE4
+
+knn.pred = knn.reg(new_data, new_data, Advertising$sales, k = 10, "kd_tree")
+RMSE5 = sqrt(mean((knn.pred$pred[0:200]-Advertising$sales[0:200])^2))
+RMSE5
+
+knn.pred = knn.reg(new_data, new_data, Advertising$sales, k = 100, "kd_tree")
+RMSE6 = sqrt(mean((knn.pred$pred[0:200]-Advertising$sales[0:200])^2))
+RMSE6
+
+new_data2 = Advertising[, 2:4]
+train2 = new_data2[0:160,]
+test2 = new_data2[161:200,]
+
+knn.pred = knn.reg(train2, test2, Advertising$sales, k = 1, "kd_tree")
+RMSE7 = sqrt(mean((knn.pred$pred[0:39]-Advertising$sales[162:200])^2))
+RMSE7
+
+knn.pred = knn.reg(train2, test2, Advertising$sales, k = 10, "kd_tree")
+RMSE8 = sqrt(mean((knn.pred$pred[0:39]-Advertising$sales[162:200])^2))
+RMSE8
+
+knn.pred = knn.reg(train2, test2, Advertising$sales, k = 100, "kd_tree")
+RMSE9 = sqrt(mean((knn.pred$pred[0:39]-Advertising$sales[162:200])^2))
+RMSE9
+
+knn.pred2 = knn.reg(new_data2, new_data2, Advertising$sales, k = 1, "kd_tree")
+RMSE10 = sqrt(mean((knn.pred2$pred[0:200]-Advertising$sales[0:200])^2))
+RMSE10
+
+knn.pred2 = knn.reg(new_data2, new_data2, Advertising$sales, k = 10, "kd_tree")
+RMSE11 = sqrt(mean((knn.pred2$pred[0:200]-Advertising$sales[0:200])^2))
+RMSE11
+
+knn.pred2 = knn.reg(new_data2, new_data2, Advertising$sales, k = 100, "kd_tree")
+RMSE12 = sqrt(mean((knn.pred2$pred[0:200]-Advertising$sales[0:200])^2))
+RMSE12
+
+```
+We were not sure if for the knn.reg() we had to use the 80% for train data and the 20% for test data or the 100% for both train and test so we did both cases.
+We are not we can answer the questions properly since we are not sure about our results.
+There one RSME that is 0 and it is suspicious that there is something wrong on that calculation.
+
+#EXERCISE 4
+a)
+```{r}
+summary(Weekly)
+cor(Weekly[,-9])
+attach(Weekly)
+```
+The only significant correlation is between year and volume so it seems that the values from previous days should not have too much influence on the prediction for the next day.
+
+
+b)
+```{r}
+glm.fits = glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data = Weekly, family = binomial)
+summary(glm.fits)
+
+```
+It seems that Lag2 is the most significant but a p-value of 0.0296 it is still relatively large.
+
+c)
+```{r}
+glm.probs = predict(glm.fits, type = "response")
+glm.pred = rep("Down", 1089)
+glm.pred[glm.probs > .5] = "Up"
+table(glm.pred, Direction)
+mean(glm.pred == Direction)
+
+```
+The diagonal elements of the confusion matrix are the correct predictions so our model correctly predicted that the market would go up on 557 days and that it would go down on 54 days. The fraction of days fo which the prediction was correct is 0.56.
+
+d)
+```{r}
+train = (Year<2009)
+Weekly.2009_10 = Weekly[!train,]
+Direction.2009_10 = Direction[!train]
+glm.fits2 = glm(Direction~Lag2, data = Weekly, family = binomial, subset = train)
+glm.probs2 = predict(glm.fits2, Weekly.2009_10, type = "response")
+glm.pred2 = rep("Down", dim(Weekly.2009_10)[1])
+glm.pred2[glm.probs2>.5] = "Up"
+table(glm.pred2, Direction.2009_10)
+#percentage of correct predictions
+mean(glm.pred2 == Direction.2009_10)
+#test set error rate
+mean(glm.pred2 != Direction.2009_10) 
+
+```
+
+e)
+```{r}
+library(MASS)
+lda.fit = lda(Direction~Lag2, data = Weekly, subset = train)
+lda.pred = predict(lda.fit, Weekly.2009_10)
+table(lda.pred$class, Direction.2009_10)
+#percentage of correct predictions
+mean(lda.pred$class == Direction.2009_10)
+#test set error rate
+mean(lda.pred$class != Direction.2009_10)
+```
+
+f)
+```{r}
+qda.fit = qda(Direction~Lag2, data = Weekly, subset = train)
+qda.pred = predict(qda.fit, Weekly.2009_10)
+table(qda.pred$class, Direction.2009_10)
+#percentage of correct predictions
+mean(qda.pred$class == Direction.2009_10)
+#test set error rate
+mean(qda.pred$class != Direction.2009_10)
+```
+
+g)
+```{r}
+library(class)
+train.X = as.matrix(Lag2[train])
+test.X = as.matrix(Lag2[!train])
+train.Direction = Direction[train]
+set.seed(1)
+knn.pred = knn(train.X, test.X, train.Direction, k=1)
+table(knn.pred, Direction.2009_10)
+mean(knn.pred == Direction.2009_10)
+
+```
+h)
+The logistic regression model and the LDA are the ones with the biggest overall fraction of correct prediction 62.5%.
+
+i)
+```{r}
+#K=5
+set.seed(1)
+knn.pred = knn(train.X, test.X, train.Direction, k=5)
+table(knn.pred, Direction.2009_10)
+mean(knn.pred == Direction.2009_10)
+
+#K=10
+set.seed(1)
+knn.pred = knn(train.X, test.X, train.Direction, k=10)
+table(knn.pred, Direction.2009_10)
+mean(knn.pred == Direction.2009_10)
+
+#K=100
+set.seed(1)
+knn.pred = knn(train.X, test.X, train.Direction, k=100)
+table(knn.pred, Direction.2009_10)
+mean(knn.pred == Direction.2009_10)
+```
+```{r}
+#GLM Lag2*Lag4
+glm.fits2 = glm(Direction~Lag2*Lag4, data = Weekly, family = binomial, subset = train)
+glm.probs2 = predict(glm.fits2, Weekly.2009_10, type = "response")
+glm.pred2 = rep("Down", dim(Weekly.2009_10)[1])
+glm.pred2[glm.probs2>.5] = "Up"
+table(glm.pred2, Direction.2009_10)
+#percentage of correct predictions
+mean(glm.pred2 == Direction.2009_10)
+#test set error rate
+mean(glm.pred2 != Direction.2009_10) 
+```
+```{r}
+#LAD Lag2*Lag4
+lda.fit = lda(Direction~Lag2*Lag4, data = Weekly, subset = train)
+lda.pred = predict(lda.fit, Weekly.2009_10)
+table(lda.pred$class, Direction.2009_10)
+#percentage of correct predictions
+mean(lda.pred$class == Direction.2009_10)
+#test set error rate
+mean(lda.pred$class != Direction.2009_10)
+```
+```{r}
+#QDA Lag2*Lag4
+qda.fit = qda(Direction~Lag2*Lag4, data = Weekly, subset = train)
+qda.pred = predict(qda.fit, Weekly.2009_10)
+table(qda.pred$class, Direction.2009_10)
+#percentage of correct predictions
+mean(qda.pred$class == Direction.2009_10)
+#test set error rate
+mean(qda.pred$class != Direction.2009_10)
+```
+
+```{r}
+#GLM Lag2+sqrt(Lag2)
+glm.fits2 = glm(Direction~Lag2+sqrt(abs(Lag2)), data = Weekly, family = binomial, subset = train)
+glm.probs2 = predict(glm.fits2, Weekly.2009_10, type = "response")
+glm.pred2 = rep("Down", dim(Weekly.2009_10)[1])
+glm.pred2[glm.probs2>.5] = "Up"
+table(glm.pred2, Direction.2009_10)
+#percentage of correct predictions
+mean(glm.pred2 == Direction.2009_10)
+#test set error rate
+mean(glm.pred2 != Direction.2009_10) 
+```
+
+```{r}
+#LAD Lag2+sqrt(Lag2)
+lda.fit = lda(Direction~Lag2+sqrt(abs(Lag2)), data = Weekly, subset = train)
+lda.pred = predict(lda.fit, Weekly.2009_10)
+table(lda.pred$class, Direction.2009_10)
+#percentage of correct predictions
+mean(lda.pred$class == Direction.2009_10)
+#test set error rate
+mean(lda.pred$class != Direction.2009_10)
+```
+
+```{r}
+#QDA Lag2+sqrt(Lag2)
+qda.fit = qda(Direction~Lag2+sqrt(abs(Lag2)), data = Weekly, subset = train)
+qda.pred = predict(qda.fit, Weekly.2009_10)
+table(qda.pred$class, Direction.2009_10)
+#percentage of correct predictions
+mean(qda.pred$class == Direction.2009_10)
+#test set error rate
+mean(qda.pred$class != Direction.2009_10)
+```
+
+
+#EXERCISE 5
+a)
+```{r}
+
+mpg01 = ifelse(Auto$mpg >= median(Auto$mpg), 1, 0)
+Auto = data.frame(Auto, mpg01)
+```
+
+b)
+```{r}
+cor(Auto[,-9])
+pairs(Auto)
+boxplot(cylinders ~ mpg01, data = Auto, main = "Cylinders vs mpg01")
+boxplot(displacement ~ mpg01, data = Auto, main = "Displacement vs mpg01")
+boxplot(horsepower ~ mpg01, data = Auto, main = "Horsepower vs mpg01")
+boxplot(weight ~ mpg01, data = Auto, main = "Weight vs mpg01")
+boxplot(acceleration ~ mpg01, data = Auto, main = "Acceleration vs mpg01")
+boxplot(year ~ mpg01, data = Auto, main = "Year vs mpg01")
+
+```
+The biggest correlations are between mpg01 and cylinders, displacement, horsepower and weight so these should be the ones most useful to predict mpg01
+
+c)
+```{r}
+#train = (year %% 2 == 0)
+#train = (Auto[,] > 314)
+train = logical(length = 392)
+train[0:313] = T
+Auto.train = Auto[train,]
+Auto.test = Auto[!train,]
+mpg01.test = mpg01[!train]
+```
+
+d)
+```{r}
+mpg.lda = lda(mpg01~cylinders+displacement+horsepower+weight, data = Auto, subset = train)
+mpg.pred = predict(mpg.lda, Auto.test)
+table(mpg.pred$class, mpg01.test)
+mean(mpg.pred$class == mpg01.test)
+mean(mpg.pred$class != mpg01.test)
+```
+The test error is 10.44%
+
+e)
+```{r}
+mpg.qda = qda(mpg01~cylinders+displacement+horsepower+weight, data = Auto, subset = train)
+mpg.pred = predict(mpg.qda, Auto.test)
+table(mpg.pred$class, mpg01.test)
+mean(mpg.pred$class == mpg01.test)
+mean(mpg.pred$class != mpg01.test)
+```
+The test error is 13.19%
+
+f)
+```{r}
+mpg.glm = glm(mpg01 ~ cylinders + weight + displacement + horsepower, data = Auto, family = binomial, subset = train)
+glm.probs = predict(mpg.glm, Auto.test, type = "response")
+mpg.pred.glm = rep(0, length(glm.probs))
+mpg.pred.glm[glm.probs > 0.5] = 1
+table(mpg.pred.glm, mpg01.test)
+mean(mpg.pred.glm == mpg01.test)
+mean(mpg.pred.glm != mpg01.test)
+```
+The test error is 20.38%
+
+g)
+```{r}
+train.X = cbind(cylinders, weight, displacement, horsepower)[train, ]
+test.X = cbind(cylinders, weight, displacement, horsepower)[!train, ]
+train.mpg01 = mpg01[train]
+set.seed(1)
+#K=1
+mpg.pred.knn = knn(train.X, test.X, train.mpg01, k = 1)
+table(mpg.pred.knn, mpg01.test)
+mean(mpg.pred.knn == mpg01.test)
+mean(mpg.pred.knn != mpg01.test)
+
+#K=5
+mpg.pred.knn = knn(train.X, test.X, train.mpg01, k = 5)
+table(mpg.pred.knn, mpg01.test)
+mean(mpg.pred.knn == mpg01.test)
+mean(mpg.pred.knn != mpg01.test)
+
+#K=10
+mpg.pred.knn = knn(train.X, test.X, train.mpg01, k = 10)
+table(mpg.pred.knn, mpg01.test)
+mean(mpg.pred.knn == mpg01.test)
+mean(mpg.pred.knn != mpg01.test)
+
+#K=100
+mpg.pred.knn = knn(train.X, test.X, train.mpg01, k = 100)
+table(mpg.pred.knn, mpg01.test)
+mean(mpg.pred.knn == mpg01.test)
+mean(mpg.pred.knn != mpg01.test)
+```
+
+K=5 is the one that seems to perform better with a test error of 14.84%
+
+#EXERCISE 6
+a) The problem that the authors are trying to solve is to be able to apply machine learning to sentiment classification for classifying documents. 
+
+b)Some of the work that has been done previously is trying to classify by source or source style and trying to classify by genre. Past work has tried to use cognitive linguistics manual or semi-manual construction of discriminant-word lexicons. The specific work that this texts refers to is Turney's work where mutual information between document phrases is used as well as the classification words "excellent" and "poor".
+
+c)The tests consists of classifying a certain number of documents in either the positive or negative movie review categories.To measure the performance they consider the number of documents classified correctly out of the total of documents reviewed with that procedure as well as the number of documents that it wasn't able to classify into either positive or negative category. 
+
+d)The authors use the data set from movie reviews from IMDb. They chose only the reviews that also had a numerical value associated to the rating like a number or a number of stars. They get this data from a real site where people review movies so I think it is valid data and representative of real world data. 
+
+e) To create a uniform class distribution data set, they randomly chose 700 reviews out of each category (positive and negative sentiment) and then divided in three equal folds meanwhile maintaining the proportion in each. 
+
+f) The authors experimented with three different machine learning algorithms which where Naive Bayes classification, maximum entropy classification and support vector machines.
+
+g) The key parameters they vary are the types of features (unigrams, bigrams, adjectives, use of position or not, use of POS or not) and whether the are looking for frequency or presence. 
+
+h) The baseline they use are the results they obtained when they did the same experiment with a set of words picked out by humans. I don't think this is the best baseline because it is based on words picked out by a human which are probably influenced by many other factors and not objetive at all. The authors also compare betweeen the three classifications methods mentioned which I consider a bit more accurate. 
+
+i) The conclusion is that most influence was due to unigrams and presence. The authors conclude that the results obtained using machine learning techniques are much better than those using the human generated baselines. They also conclude that out of the three classification methods, the Support Vector Machine is the best and the Naive Bayes is usually the least accurate. However, they conclude that they weren't able to reach the same accuracy as standard topic-based categorization. 
+
+j) For future studies, they mention that it might be neccessary to include some form of discourse analysis. They mention that the next step is identifying features that will be able to indicate where the sentences are on-topic with the overall sentiment of the document or not. 
+
+k) In our opinion, this paper is very well structured with a good division of sections. The authors follow a good methodology of first introducing the subject, then the different types of experiments, results and conclusions and finally future steps. At times some parts of the text were very technical and hard to understand without a little more research on our behalf. However, I think that all in all it is a well explained paper with a temporary "solution" to an interesting current problem.
+
+
+
+

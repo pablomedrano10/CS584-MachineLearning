@@ -1,0 +1,303 @@
+---
+title: Homework 3, {Cristina Fernandez Garcia} {A20410992}, {Raquel Buezo Tordesillas}
+  {A20410771}, {Pablo Medrano} {A20410758}
+author2:
+  A20410771: null
+  Raquel Buezo Tordesillas: null
+author3:
+  A20410758: null
+  Pablo Medrano Gastañaga: null
+output:
+  html_document: default
+  pdf_document: default
+author1:
+  A20410992: null
+  Cristina Fernandez Garcia: null
+---
+
+### UNDERSTANDING THE DATA
+
+#### EXERCISE 1
+
+#####(a)
+```{r}
+library(ISLR)
+attach(Auto)
+dim(Auto)
+```
+The data has 397 observations, or rows, and nine variables, or columns.
+
+#####(b)
+```{r}
+summary(Auto)
+```
+We can observe from the data that the averages of weight, cylinders, mpg, displacement are respectively 2978, 5.472, 23.45 and 194.4 
+
+#####(c)
+```{r}
+summary(name)
+number = length(unique(name))
+number
+```
+There are 301 unique cars.
+
+#### EXERCISE 2
+The null hypothesis is that the coefficients of the model are:
+$$H0: β1 = β2 = ··· = βp = 0$$
+
+#### EXERCISE 3
+```{r}
+summary(Auto)
+```
+The only qualitative variable is "name" because it is the only one that listed the number of observations that fall in each category.
+
+#### EXERCISE 4
+We would pick displacement, horsepower and weight because as it could be seen on the exercise 5 are the three that are more correlated to mpg.
+
+
+#### EXERCISE 5
+```{r}
+cor(Auto[,-9])
+```
+The most correlated ones are: 
+weight-displacement: 0.9329944
+displacement-cylinders: 0.9508233
+cylinders-weight: 0.8974273
+
+
+#### EXERCISE 6
+```{r}
+results = lm(mpg~weight+displacement+horsepower,data = Auto)
+leverage = hat(model.matrix(results))
+plot(leverage)
+plot(displacement)
+match(max(leverage, na.rm = TRUE),leverage)
+Auto[14,]
+```
+The point with the highest leverage value is the 14th and the its values are weight=3086, displacement=455, horsepower=225
+
+#### EXERCISE 7
+```{r}
+library(car)
+lm.1 = lm(mpg~weight+displacement+horsepower,data = Auto)
+vif(lm.1)
+```
+The variance inflaction factor (VIF) is an index that measures how much the variance (the square of the estimate's standard deviation) of an estimated regression coefficient is increased because of collinearity.
+
+#### EXERCISE 8
+```{r}
+treatoutliers = function(x) {
+qnt = quantile(x, probs=c(.25, .75), na.rm = T)
+caps = quantile(x, probs=c(.05, .95), na.rm = T)
+H = 3 * IQR(x, na.rm = T)
+x[x < (qnt[1] - H)] = caps[1]
+x[x > (qnt[2] + H)] = caps[2]
+return(x)
+}
+
+accelerationout = treatoutliers(acceleration)
+weightout = treatoutliers(weight)
+displacementout = treatoutliers(displacement)
+horsepowerout = treatoutliers(horsepower)
+mpgout = treatoutliers(mpg)
+cylindersout = treatoutliers(cylinders)
+yearout = treatoutliers(year)
+originout = treatoutliers(origin)
+
+accelerationnum = 3*IQR(acceleration, na.rm = T)
+horsepowernum = 3*IQR(horsepower, na.rm = T)
+outlier1 = sum(acceleration < accelerationnum)
+outlier1
+outlier2 = sum(horsepower > horsepowernum)
+outlier2
+
+boxplot(accelerationout,main="Acceleration")
+boxplot(weightout,main="Weight")
+boxplot(displacementout,main="Displacement")
+boxplot(horsepowerout,main="Horsepower")
+boxplot(mpgout,main="MPG")
+boxplot(cylindersout,main="Cylinders")
+boxplot(yearout,main="Year")
+boxplot(originout,main="Origin")
+```
+Acceleration and horsepower have outliers. Acceleration has 6 outliers and horsepower has 42 outliers.
+
+
+
+### MODEL FITTING
+
+#### EXERCISE 9
+```{r}
+lm.2=lm(mpg~weight,data=Auto)
+summary(lm.2)
+lm.3=lm(mpg~displacement,data=Auto)
+summary(lm.3)
+lm.4=lm(mpg~horsepower,data=Auto)
+summary(lm.4)
+lm.5=lm(mpg~cylinders,data=Auto)
+summary(lm.5)
+lm.6=lm(mpg~acceleration,data=Auto)
+summary(lm.6)
+lm.7=lm(mpg~year,data=Auto)
+summary(lm.7)
+lm.8=lm(mpg~origin,data=Auto)
+summary(lm.8)
+```
+The best model we can fit using a single numerical feature is using weight. We can observe that has an Adjusted R-squared:  0.6918 which is the highest of all the models computed.
+
+#### EXERCISE 10
+```{r}
+lm.9=lm(mpg~weight+year+origin,data=Auto)
+summary(lm.9)
+```
+
+#### EXERCISE 11
+```{r}
+lm.10=lm(mpg~weight+I(weight^2),data=Auto)
+summary(lm.10)
+lm.11=lm(mpg~displacement+I(displacement^2),data=Auto)
+summary(lm.11)
+lm.12=lm(mpg~horsepower+I(horsepower^2),data=Auto)
+summary(lm.12)
+lm.13=lm(mpg~cylinders+I(cylinders^2),data=Auto)
+summary(lm.13)
+lm.14=lm(mpg~acceleration+I(acceleration^2),data=Auto)
+summary(lm.14)
+lm.15=lm(mpg~year+I(year^2),data=Auto)
+summary(lm.15)
+lm.16=lm(mpg~origin+I(origin^2),data=Auto)
+summary(lm.16)
+```
+
+The model that has the highest adjusted R2 value is:  $$lm(mpg~weight+I(weight^2),data=Auto$$
+with a R-squared: 0.7137
+
+The model without the x^2 feature (lm(mpg~weight,data=Auto) that has a R-squared: 0.6918 
+
+So the improvement is of a 3.165%
+
+
+#### EXERCISE 12
+```{r}
+lm.32=lm(mpg~weight+year+weight*year,data=Auto)
+summary(lm.32)
+```
+This model has an adjusted R-squared of 0.8326
+All the variables are statistically significant since all have a low value of the p-value
+
+#### EXERCISE 13
+
+The model that has the higher adjusted R-squared is $$lm(mpg~horsepower+year+horsepower*year,data=Auto)$$ with a value: 0.7503
+
+We propose the model above that has an R-squared of: 0.8811
+
+```{r}
+summary(lm(mpg~horsepower+weight*year*horsepower*acceleration,data=Auto))
+```
+
+
+### EXERCISE 14
+
+```{r}
+lm.cd=lm(mpg~cylinders+displacement,data=Auto)
+summary(lm.cd)
+lm.d=lm(mpg~displacement,data=Auto)
+summary(lm.d)
+lm.20=lm(mpg~displacement+cylinders+displacement*cylinders,data=Auto)
+summary(lm.20)
+```
+We add an interaction between cylinders and displacement and it could be seen from the summary that in this last model all the predictors are statistically significant since all have a low p-value.
+The R-squared of this model is 0.6744
+
+### EXERCISE 15
+
+```{r}
+lm.21=lm(sales~TV+radio+newspaper,data=Advertising)
+
+vUpdate = function(B, X, Y, alpha) {
+  n = nrow(X);
+  gradient = 1 / n * t(X) %*% (X %*% B - Y);
+  B = B - alpha * gradient;
+  return(B);
+}
+
+vCost = function(B, X, Y, alpha) {
+  n = nrow(X)
+  retval = (t(X %*% B - Y) %*% (X %*% B - Y) / (2*n));
+  return(retval);
+}
+
+n = nrow(Advertising);
+X = matrix(c(rep(1), Advertising$TV, Advertising$radio, Advertising$newspaper), nrow=n, ncol=4);
+Y = matrix(Advertising$sales, nrow=n, ncol=1);
+B = matrix(c(0,0,0,0), nrow=4, ncol=1);
+
+alpha=c(0.000001, 0.0000002, 0.000003, 0.0000004, 0.000005)
+cost_aux=c(0,0,0,0,0)
+nIter = 1000;
+
+for (j in 1:5){
+  alpha_aux=alpha[j]
+  print(alpha_aux)
+  for(i in 1:nIter) {
+    B = vUpdate(B, X, Y, alpha_aux);
+    cost = vCost(B, X, Y, alpha_aux);
+    print(cost)
+  }
+  cost_aux[j]=cost
+  print(alpha_aux)
+  print(cost_aux[j])
+}
+
+plot(alpha,cost_aux)
+
+```
+
+
+
+<!-- ### EXERCISE 16 -->
+
+<!-- ```{r} -->
+
+<!-- n = nrow(Advertising); -->
+<!-- X = matrix(c(rep(1), Advertising$TV, Advertising$radio, Advertising$newspaper), nrow=n, ncol=4); -->
+<!-- Y = matrix(Advertising$sales, nrow=n, ncol=1); -->
+
+<!-- gradient_time=c(0,0,0,0,0,0,0,0,0,0) -->
+<!-- normal_time=c(0,0,0,0,0,0,0,0,0,0) -->
+
+<!-- for (i in 1:10){ -->
+<!--   start.time <- Sys.time() -->
+<!--   #do gradient descent -->
+
+<!--   end.time <- Sys.time() -->
+<!--   time.taken <- end.time - start.time  -->
+<!--   gradient_time[i]=time.taken -->
+<!-- } -->
+
+<!-- for (j in 1:10){ -->
+<!--   start.time <- Sys.time() -->
+<!--   nLR = function(X, Y) { -->
+<!--     retval = solve(t(X) %*% X) %*% t(X) %*% Y; -->
+<!--     return(retval); -->
+<!--   } -->
+<!--   nSol = nLR(X, Y); -->
+
+<!--   end.time <- Sys.time() -->
+<!--   time.taken <- end.time - start.time  -->
+<!--   normal_time[j]=time.taken -->
+<!-- } -->
+
+
+
+<!-- ``` -->
+
+
+### EXERCISE 17
+Shooting and theft are the ones that seem more correlated with temperature since they are the ones that vary the most with temperature.
+
+### EXERCISE 18
+The number of people in the street or the time people pass in the street could be a confounding variable since when it is hotter people tend to go out more than when it is cold and spend more time in the street so it is more probable that they are part or victims of a crime
+
+### EXERCISE 19
+More predictors can be added such as age, education level,... and use a multiple regression model linear or non linear
